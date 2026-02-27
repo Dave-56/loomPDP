@@ -97,8 +97,23 @@ export default function App() {
 
   // Save state on change
   useEffect(() => {
-    localStorage.setItem('loom_tasks', JSON.stringify(tasks));
-    localStorage.setItem('loom_brand', JSON.stringify(brand));
+    try {
+      // Limit the number of tasks saved to localStorage to prevent QuotaExceededError
+      // Base64 images are large, so we only keep the most recent 10 tasks in persistent storage
+      const tasksToSave = tasks.slice(0, 10);
+      localStorage.setItem('loom_tasks', JSON.stringify(tasksToSave));
+      localStorage.setItem('loom_brand', JSON.stringify(brand));
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+        console.warn('Storage quota exceeded, only saving most recent tasks.');
+        // If it still fails, try saving even fewer tasks
+        try {
+          localStorage.setItem('loom_tasks', JSON.stringify(tasks.slice(0, 5)));
+        } catch (innerE) {
+          console.error('Failed to save tasks even with reduced count:', innerE);
+        }
+      }
+    }
   }, [tasks, brand]);
 
   const handleGenerateBatch = async (prompts: string[], config: { aspectRatio: AspectRatio; referenceImage?: string }) => {
