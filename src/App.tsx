@@ -30,23 +30,48 @@ export default function App() {
   // Check for API key on mount
   useEffect(() => {
     const checkKey = async () => {
-      if (window.aistudio) {
-        const hasKey = await window.aistudio.hasSelectedApiKey();
-        setHasApiKey(hasKey);
-      } else {
-        // Fallback for environments without aistudio global
-        setHasApiKey(true);
+      try {
+        if (window.aistudio) {
+          const hasKey = await window.aistudio.hasSelectedApiKey();
+          setHasApiKey(hasKey);
+        } else {
+          // Fallback for environments without aistudio global
+          setHasApiKey(true);
+        }
+      } catch (error) {
+        console.error("Error checking API key:", error);
+        setHasApiKey(true); // Fallback to allow app to load
       }
     };
     checkKey();
   }, []);
 
   const handleOpenKeySelector = async () => {
-    if (window.aistudio) {
-      await window.aistudio.openSelectKey();
-      setHasApiKey(true); // Assume success as per guidelines
+    try {
+      if (window.aistudio) {
+        await window.aistudio.openSelectKey();
+        setHasApiKey(true); // Assume success as per guidelines
+      }
+    } catch (error) {
+      console.error("Error opening key selector:", error);
     }
   };
+
+  // Global error logger
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      console.error("Global error caught:", event.error);
+    };
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      console.error("Unhandled promise rejection:", event.reason);
+    };
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleRejection);
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleRejection);
+    };
+  }, []);
 
   // Apply theme to document
   useEffect(() => {
@@ -110,12 +135,16 @@ export default function App() {
     }
 
     setIsGenerating(false);
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: theme === 'dark' ? ['#3b82f6', '#ffffff', '#000000'] : ['#3b82f6', '#000000', '#ffffff']
-    });
+    try {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: theme === 'dark' ? ['#3b82f6', '#ffffff', '#000000'] : ['#3b82f6', '#000000', '#ffffff']
+      });
+    } catch (e) {
+      console.error("Confetti failed:", e);
+    }
   };
 
   const handleDeleteTask = (id: string) => {

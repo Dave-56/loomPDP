@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, X, Image as ImageIcon, Wand2, Layers, Maximize2, Type, Building2 } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Wand2, Layers, Maximize2, Type, Building2, User } from 'lucide-react';
 import { useDropzone, Accept } from 'react-dropzone';
 import { AspectRatio } from '../types';
 import { cn } from '../lib/utils';
@@ -13,6 +13,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ onGenerate, isGenerating }) =>
   const [batchInput, setBatchInput] = useState('');
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('3:4');
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [selectedPoses, setSelectedPoses] = useState<string[]>(['Front View']);
+
+  const poses = ['Front View', 'Side View', 'Back View', 'Detail Close-up', 'Action Shot'];
+
+  const togglePose = (pose: string) => {
+    setSelectedPoses(prev => 
+      prev.includes(pose) 
+        ? prev.filter(p => p !== pose) 
+        : [...prev, pose]
+    );
+  };
 
   const onDrop = (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -32,19 +43,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ onGenerate, isGenerating }) =>
   } as any);
 
   const handleGenerate = () => {
-    let prompts = batchInput
+    let basePrompts = batchInput
       .split('\n')
       .map(p => p.trim())
       .filter(p => p.length > 0);
     
-    // If no prompts but we have a reference, use a default high-end prompt
-    if (prompts.length === 0 && referenceImage) {
-      prompts = ["Professional model wearing this clothing item, high-end fashion photography, studio setting"];
+    if (basePrompts.length === 0 && referenceImage) {
+      basePrompts = ["Professional model wearing this clothing item"];
     }
     
-    if (prompts.length === 0) return;
+    if (basePrompts.length === 0) return;
+
+    let finalPrompts: string[] = [];
+
+    // Generate each selected pose for each base prompt
+    basePrompts.forEach(p => {
+      selectedPoses.forEach(pose => {
+        finalPrompts.push(`${p}, ${pose}, high-end fashion photography`);
+      });
+    });
     
-    onGenerate(prompts, { 
+    onGenerate(finalPrompts, { 
       aspectRatio, 
       referenceImage: referenceImage || undefined 
     });
@@ -137,6 +156,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ onGenerate, isGenerating }) =>
               <span className="text-xs opacity-40">Drop clothing photo</span>
             </>
           )}
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <label className="text-xs font-semibold uppercase tracking-wider opacity-50 flex items-center gap-2">
+          <User size={14} /> Model Poses
+        </label>
+        
+        <div className="flex flex-wrap gap-2">
+          {poses.map(pose => (
+            <button
+              key={pose}
+              onClick={() => togglePose(pose)}
+              className={cn(
+                "px-3 py-1.5 text-[10px] rounded-full border transition-all",
+                selectedPoses.includes(pose)
+                  ? "bg-accent/10 border-accent text-accent font-bold"
+                  : "border-border opacity-60 hover:opacity-100"
+              )}
+            >
+              {pose}
+            </button>
+          ))}
         </div>
       </div>
 
